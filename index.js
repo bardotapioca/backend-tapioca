@@ -1,11 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
-// Configuração CORS mais robusta
+// Configuração CORS
 const corsOptions = {
   origin: [
     'https://bardotapioca.vercel.app',
@@ -21,8 +20,6 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
-
-// Handle preflight requests
 app.options('*', cors(corsOptions));
 
 // Supabase Client
@@ -51,7 +48,7 @@ class WhatsAppService {
     }
 }
 
-// Middleware de log para debug
+// Middleware de log
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
@@ -59,7 +56,7 @@ app.use((req, res, next) => {
 
 // Rotas da API
 
-// Login Admin
+// Login Admin (SEM hash - comparação direta)
 app.post('/api/admin/login', async (req, res) => {
     try {
         console.log('Tentativa de login:', req.body);
@@ -81,8 +78,8 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
 
-        const validPassword = await bcrypt.compare(password, admin.password);
-        if (!validPassword) {
+        // COMPARAÇÃO DIRETA (sem hash)
+        if (admin.password !== password) {
             console.log('Senha inválida para:', username);
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
@@ -208,8 +205,8 @@ app.get('/api/health', (req, res) => {
 // Rota padrão
 app.get('/', (req, res) => {
     res.json({ 
-        message: 'API do Bar da Tapioca - Node.js 22 - CORS FIXED',
-        version: '1.0.1',
+        message: 'API do Bar da Tapioca - Node.js 22 - SENHA TEXTO',
+        version: '1.0.2',
         endpoints: {
             health: '/api/health',
             orders: '/api/orders',
@@ -235,6 +232,7 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📱 API disponível em: http://localhost:${PORT}/api`);
     console.log(`🌐 CORS habilitado para: bardotapioca.vercel.app`);
+    console.log(`🔓 Login: admin / admin123 (senha em texto)`);
     console.log(`⚡ Node.js version: ${process.version}`);
 });
 
