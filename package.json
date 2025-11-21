@@ -1,11 +1,10 @@
 {
   "name": "bardotapioca-backend",
-  "version": "1.0.0",
-  "description": "Backend para sistema de pedidos do Bar da Tapioca",
+  "version": "1.0.1",
+  "description": "Backend para sistema de pedidos do Bar da Tapioca - CORS FIXED",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.18.2",

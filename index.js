@@ -5,9 +5,25 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
+// Configuração CORS mais robusta
+const corsOptions = {
+  origin: [
+    'https://bardotapioca.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5000'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 // Supabase Client
 const supabaseUrl = 'https://niqyditsjouvhclprtpk.supabase.co';
@@ -18,7 +34,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 class WhatsAppService {
     static async sendMessage(phone, message) {
         console.log(`📱 WhatsApp para ${phone}: ${message}`);
-        // Implementação real com Twilio ou outra API
         return true;
     }
 
@@ -36,12 +51,24 @@ class WhatsAppService {
     }
 }
 
+// Middleware de log para debug
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
+
 // Rotas da API
 
 // Login Admin
 app.post('/api/admin/login', async (req, res) => {
     try {
+        console.log('Tentativa de login:', req.body);
+        
         const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
+        }
 
         const { data: admin, error } = await supabase
             .from('admins')
@@ -50,15 +77,21 @@ app.post('/api/admin/login', async (req, res) => {
             .single();
 
         if (error || !admin) {
+            console.log('Admin não encontrado:', username);
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
 
         const validPassword = await bcrypt.compare(password, admin.password);
         if (!validPassword) {
+            console.log('Senha inválida para:', username);
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
 
-        res.json({ message: 'Login realizado com sucesso' });
+        console.log('Login bem-sucedido:', username);
+        res.json({ 
+            message: 'Login realizado com sucesso',
+            user: { username: admin.username }
+        });
     } catch (error) {
         console.error('Erro no login:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -75,7 +108,7 @@ app.get('/api/orders', async (req, res) => {
 
         if (error) throw error;
 
-        res.json(orders);
+        res.json(orders || []);
     } catch (error) {
         console.error('Erro ao buscar pedidos:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -86,6 +119,8 @@ app.get('/api/orders', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
     try {
         const { customer_name, whatsapp, items, total_amount, payment_method, notes } = req.body;
+
+        console.log('Novo pedido:', { customer_name, whatsapp, total_amount });
 
         const { data: order, error } = await supabase
             .from('orders')
@@ -124,6 +159,8 @@ app.put('/api/orders/:id', async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
 
+        console.log(`Atualizando pedido ${id} para status: ${status}`);
+
         // Buscar pedido atual
         const { data: currentOrder, error: fetchError } = await supabase
             .from('orders')
@@ -160,20 +197,30 @@ app.put('/api/orders/:id', async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        cors: 'enabled',
+        frontend: 'bardotapioca.vercel.app'
+    });
 });
 
 // Rota padrão
 app.get('/', (req, res) => {
     res.json({ 
-        message: 'API do Bar da Tapioca - Node.js 22',
-        version: '1.0.0'
+        message: 'API do Bar da Tapioca - Node.js 22 - CORS FIXED',
+        version: '1.0.1',
+        endpoints: {
+            health: '/api/health',
+            orders: '/api/orders',
+            admin_login: '/api/admin/login'
+        }
     });
 });
 
 // Tratamento de erros
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Erro global:', err.stack);
     res.status(500).json({ error: 'Algo deu errado!' });
 });
 
@@ -187,6 +234,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📱 API disponível em: http://localhost:${PORT}/api`);
+    console.log(`🌐 CORS habilitado para: bardotapioca.vercel.app`);
     console.log(`⚡ Node.js version: ${process.version}`);
 });
 
