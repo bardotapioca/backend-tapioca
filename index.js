@@ -73,7 +73,12 @@ app.post('/api/admin/login', async (req, res) => {
             .eq('username', username)
             .single();
 
-        if (error || !admin) {
+        if (error) {
+            console.log('Erro na busca:', error);
+            return res.status(401).json({ error: 'Credenciais inválidas' });
+        }
+
+        if (!admin) {
             console.log('Admin não encontrado:', username);
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
@@ -81,6 +86,8 @@ app.post('/api/admin/login', async (req, res) => {
         // COMPARAÇÃO DIRETA (sem hash)
         if (admin.password !== password) {
             console.log('Senha inválida para:', username);
+            console.log('Senha esperada:', admin.password);
+            console.log('Senha recebida:', password);
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
 
@@ -205,8 +212,8 @@ app.get('/api/health', (req, res) => {
 // Rota padrão
 app.get('/', (req, res) => {
     res.json({ 
-        message: 'API do Bar da Tapioca - Node.js 22 - SENHA TEXTO',
-        version: '1.0.2',
+        message: 'API do Bar da Tapioca - Node.js 22',
+        version: '1.0.0',
         endpoints: {
             health: '/api/health',
             orders: '/api/orders',
@@ -232,7 +239,6 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📱 API disponível em: http://localhost:${PORT}/api`);
     console.log(`🌐 CORS habilitado para: bardotapioca.vercel.app`);
-    console.log(`🔓 Login: admin / admin123 (senha em texto)`);
     console.log(`⚡ Node.js version: ${process.version}`);
 });
 
